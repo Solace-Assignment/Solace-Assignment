@@ -1,91 +1,134 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import type { Advocate } from './types';
 
+import { useEffect, useState } from 'react';
+import { useDebounce } from './hooks/useDebounce';
+import { formatPhoneNumber } from './utils';
 export default function Home() {
-  const [advocates, setAdvocates] = useState([]);
-  const [filteredAdvocates, setFilteredAdvocates] = useState([]);
+  const [advocates, setAdvocates] = useState<Advocate[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm);
 
   useEffect(() => {
-    console.log("fetching advocates...");
-    fetch("/api/advocates").then((response) => {
-      response.json().then((jsonResponse) => {
-        setAdvocates(jsonResponse.data);
-        setFilteredAdvocates(jsonResponse.data);
-      });
+    console.log('Fetching advocates...');
+
+    const url = new URL('/api/advocates', window.location.origin);
+
+    if (debouncedSearchTerm) {
+      url.searchParams.set('search', debouncedSearchTerm.toLowerCase());
+    }
+
+    fetch(url).then((response) => {
+      response
+        .json()
+        .then((jsonResponse) => {
+          setAdvocates(jsonResponse.data);
+        })
+        .catch((error) => {
+          console.error('Error fetching advocates:', error);
+
+          alert(
+            'Sorry, there was an error fetching advocates. If this issue persists, please contact support.',
+          );
+        });
     });
-  }, []);
+  }, [debouncedSearchTerm]);
 
-  const onChange = (e) => {
-    const searchTerm = e.target.value;
-
-    document.getElementById("search-term").innerHTML = searchTerm;
-
-    console.log("filtering advocates...");
-    const filteredAdvocates = advocates.filter((advocate) => {
-      return (
-        advocate.firstName.includes(searchTerm) ||
-        advocate.lastName.includes(searchTerm) ||
-        advocate.city.includes(searchTerm) ||
-        advocate.degree.includes(searchTerm) ||
-        advocate.specialties.includes(searchTerm) ||
-        advocate.yearsOfExperience.includes(searchTerm)
-      );
-    });
-
-    setFilteredAdvocates(filteredAdvocates);
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
 
-  const onClick = () => {
-    console.log(advocates);
-    setFilteredAdvocates(advocates);
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+  };
+
+  const onReset = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    setSearchTerm('');
   };
 
   return (
-    <main style={{ margin: "24px" }}>
-      <h1>Solace Advocates</h1>
-      <br />
-      <br />
-      <div>
-        <p>Search</p>
-        <p>
-          Searching for: <span id="search-term"></span>
-        </p>
-        <input style={{ border: "1px solid black" }} onChange={onChange} />
-        <button onClick={onClick}>Reset Search</button>
-      </div>
-      <br />
-      <br />
-      <table>
-        <thead>
-          <th>First Name</th>
-          <th>Last Name</th>
-          <th>City</th>
-          <th>Degree</th>
-          <th>Specialties</th>
-          <th>Years of Experience</th>
-          <th>Phone Number</th>
-        </thead>
-        <tbody>
-          {filteredAdvocates.map((advocate) => {
-            return (
-              <tr>
-                <td>{advocate.firstName}</td>
-                <td>{advocate.lastName}</td>
-                <td>{advocate.city}</td>
-                <td>{advocate.degree}</td>
-                <td>
-                  {advocate.specialties.map((s) => (
-                    <div>{s}</div>
-                  ))}
+    <div className="w-screen h-screen overflow-y-auto">
+      <header className="sticky top-0">
+        <div className="bg-emerald-950 p-4">
+          <h1 className="text-2xl font-bold text-white">Solace Advocates</h1>
+        </div>
+
+        <form
+          className="sticky top-0 mb-4 bg-gray-100 p-4 flex items-center justify-between"
+          onSubmit={onSubmit}
+          onReset={onReset}
+        >
+          <span>Searching for: </span>
+
+          <input
+            className="border-2 border-gray-300 rounded-md p-2 mx-2 flex-1"
+            onChange={onChange}
+            value={searchTerm}
+          />
+
+          <button
+            type="reset"
+            className="bg-yellow-600 px-4 py-2 rounded-md font-bold"
+          >
+            Reset Search
+          </button>
+        </form>
+      </header>
+
+      <main className="m-4">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className="p-2 bg-gray-100 text-xs uppercase">First Name</th>
+              <th className="p-2 bg-gray-100 text-xs uppercase">Last Name</th>
+              <th className="p-2 bg-gray-100 text-xs uppercase">City</th>
+              <th className="p-2 bg-gray-100 text-xs uppercase">Degree</th>
+              <th className="p-2 bg-gray-100 text-xs uppercase">Specialties</th>
+              <th className="p-2 bg-gray-100 text-xs uppercase">
+                Years of Experience
+              </th>
+              <th className="p-2 bg-gray-100 text-xs uppercase">
+                Phone Number
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {advocates.map((advocate) => (
+              <tr key={advocate.id}>
+                <td className="p-2 border-2 border-gray-100 align-top">
+                  {advocate.firstName}
                 </td>
-                <td>{advocate.yearsOfExperience}</td>
-                <td>{advocate.phoneNumber}</td>
+                <td className="p-2 border-2 border-gray-100 align-top">
+                  {advocate.lastName}
+                </td>
+                <td className="p-2 border-2 border-gray-100 align-top">
+                  {advocate.city}
+                </td>
+                <td className="p-2 border-2 border-gray-100 align-top">
+                  {advocate.degree}
+                </td>
+                <td className="p-2 border-2 border-gray-100 align-top">
+                  <ul className="list-disc list-inside">
+                    {advocate.specialties.map((s) => (
+                      <li key={s}>{s}</li>
+                    ))}
+                  </ul>
+                </td>
+                <td className="p-2 border-2 border-gray-100 align-top">
+                  {advocate.yearsOfExperience}
+                </td>
+                <td className="p-2 border-2 border-gray-100 align-top">
+                  {formatPhoneNumber(advocate.phoneNumber)}
+                </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </main>
+            ))}
+          </tbody>
+        </table>
+      </main>
+    </div>
   );
 }
