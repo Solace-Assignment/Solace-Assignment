@@ -36,6 +36,6 @@
     "typescript": "^5.8.3"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": ["prettier --write --ignore-unknown", "next lint --fix"]
+    "*.{js,jsx,ts,tsx}": ["prettier --write --ignore-unknown", "eslint --fix"]
   }
 }
